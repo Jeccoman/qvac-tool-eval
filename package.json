@@ -1,0 +1,13 @@
+{
+  "name": "qvac-tool-eval",
+  "version": "1.0.0",
+  "description": "Tool-calling accuracy and speed of the QVAC SDK vs Ollama on the same model",
+  "scripts": {},
+  "keywords": [],
+  "author": "Jacob Mwatonoka",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@qvac/sdk": "0.22.0"
+  }
+}
