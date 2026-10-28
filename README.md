@@ -48,7 +48,12 @@ Every request starts with the same ~2,170 tokens: the system prompt and the 22 t
 
 A shared cache could leak one request's content into the next, so `leak-check.mjs` tests that. It sends a secret in one request, then asks for it in a separate request that uses the same key. In 3 of 3 trials the second request processed about 30 new tokens on top of about 2,430 cached ones and did not know the secret. Only the common prefix was reused.
 
-For agent workloads that send the same tools on every call, a shared key is a free 2.3 s per decision. It might be worth documenting, or doing by default for a matching prefix.
+`kv-safety.mjs` checks two harder cases, 3 trials each:
+
+- **Concurrent requests.** Four requests sent at once on one key each ask the model to repeat a different code word. All 12 answers contained their own word and none of the others; the SDK ran them one after another, each processing about 10 new tokens. A later request on the same key knew none of the words.
+- **A changed tool list.** The key is warmed with all 22 tools, then a web-search request is sent on the same key with `web_search` removed. QVAC reprocessed the prompt from the point where the tool lists differ (1,115 tokens instead of 2,060) and the model never called the removed tool. It made the same call (`read_webpage`) as a fresh key with the same tools, while the full tool list gets `web_search`.
+
+This covers one model and two scenarios, not every way a key can be shared. The upcoming `seedFrom` option ([tetherto/qvac#5291](https://github.com/tetherto/qvac/pull/5291)) is the designed way to start many chats from one base cache.
 
 ## Method
 
@@ -78,8 +83,9 @@ node speed-bench.mjs --cases cases/overseer_heldout.jsonl --out results/speed.js
 # speed and accuracy with a shared kvCache key
 node speed-bench.mjs --cases cases/overseer_heldout.jsonl --out results/speed-kv.jsonl --only qvac --kv overseer-shared-prefix
 
-# cross-request leak check
+# cross-request leak check, then concurrency and tool-list changes on one key
 node leak-check.mjs
+node kv-safety.mjs
 
 python3 report.py
 ```
